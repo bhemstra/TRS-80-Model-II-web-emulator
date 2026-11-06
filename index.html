@@ -1,0 +1,632 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>TRS-80 Model II</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans+Condensed:wght@400;600&family=VT323&display=swap">
+<script>
+  // ?embed=1: only the emulator, for an iframe in another site
+  if (/[?&]embed=1/.test(location.search)) document.documentElement.classList.add('embed');
+</script>
+<style>
+html.embed header, html.embed .about { display: none; }
+html.embed .wrap { padding-top: 8px; padding-bottom: 8px; }
+/* Layout: one column, the Model II screen in its bezel first, the controls
+   under it like the keyboard sits under the display. */
+:root {
+  --bg: #e9ebe9;
+  --panel: #f6f7f5;
+  --fg: #1c201e;
+  --muted: #5d6661;
+  --line: #cdd2ce;
+  --accent: #a6232b;          /* the red of the Radio Shack badge */
+  --bezel: #d8d4c8;           /* the Model II case */
+  --bezel-edge: #b9b3a4;
+  --screen: #070908;
+  --phosphor: #e4efe6;
+  --glow: rgba(200, 240, 210, 0.35);
+  --font-ui: "IBM Plex Sans Condensed", "Arial Narrow", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  --font-screen: "VT323", "IBM Plex Mono", ui-monospace, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #131615; --panel: #1b1f1d; --fg: #e3e8e4; --muted: #9aa49e; --line: #2d332f;
+    --accent: #e0636a; --bezel: #3a3833; --bezel-edge: #2a2925; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #131615; --panel: #1b1f1d; --fg: #e3e8e4; --muted: #9aa49e; --line: #2d332f;
+  --accent: #e0636a; --bezel: #3a3833; --bezel-edge: #2a2925; color-scheme: dark;
+}
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-ui);
+  font-size: 16px;
+  line-height: 1.5;
+}
+.wrap {
+  max-width: 1000px;
+  margin: 0 auto;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 20px 40px;
+  display: grid;
+  gap: 18px;
+}
+header { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 14px; }
+h1 {
+  font-family: var(--font-ui);
+  font-weight: 600;
+  font-size: 1.6rem;
+  letter-spacing: 0.01em;
+  margin: 0;
+  text-wrap: balance;
+}
+.badge {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+.bezel {
+  background: linear-gradient(180deg, var(--bezel), var(--bezel-edge));
+  border-radius: 14px;
+  padding: clamp(10px, 3vw, 28px);
+  box-shadow: 0 1px 0 rgba(255,255,255,0.4) inset, 0 8px 24px rgba(0,0,0,0.18);
+}
+.tube {
+  background: var(--screen);
+  border-radius: 10px;
+  padding: clamp(8px, 2.2vw, 22px) clamp(8px, 2.6vw, 26px);
+  box-shadow: 0 0 0 2px #000 inset, 0 0 40px rgba(0,0,0,0.6) inset;
+  position: relative;
+}
+canvas {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-width: 100%;
+  outline: none;
+  cursor: text;
+  filter: drop-shadow(0 0 3px var(--glow));
+}
+.tube:focus-within { box-shadow: 0 0 0 2px #000 inset, 0 0 40px rgba(0,0,0,0.6) inset, 0 0 0 3px var(--accent); }
+.hint {
+  position: absolute;
+  inset: auto 0 10px 0;
+  text-align: center;
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  color: #8fa395;
+  pointer-events: none;
+}
+.controls { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+button, select {
+  font-family: var(--font-ui);
+  font-size: 0.95rem;
+  color: var(--fg);
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 6px 12px;
+  cursor: pointer;
+}
+button:hover { border-color: var(--muted); }
+button:focus-visible, select:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+button.primary { border-color: var(--accent); color: var(--accent); font-weight: 600; }
+label { display: inline-flex; gap: 6px; align-items: center; color: var(--muted); font-size: 0.95rem; }
+label.file input { max-width: 14em; font-size: 0.85rem; }
+.drives { display: grid; gap: 8px; }
+.drive { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.drive .dname { font-family: var(--font-mono); font-size: 0.8rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); min-width: 5.5em; }
+.drive label.file input { max-width: 11em; }
+.drive select { max-width: 19em; }
+.drive .save { display: inline-flex; gap: 6px; align-items: center; color: var(--muted); font-size: 0.85rem; }
+.drive button { font-size: 0.85rem; padding: 4px 10px; }
+.drive .wp { font-size: 0.85rem; }
+.status {
+  margin-left: auto;
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+  display: inline-flex; gap: 8px; align-items: center;
+}
+.dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); }
+.dot.run { background: #3b9b5a; }
+.dot.load { background: #c9922b; }
+.dot.err { background: var(--accent); }
+.try { display: grid; gap: 8px; }
+.try h2, .about h2 {
+  font-size: 0.8rem;
+  font-family: var(--font-mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin: 0;
+  font-weight: 600;
+}
+.try .row { display: flex; flex-wrap: wrap; gap: 8px; }
+/* Buttons and text for one system show only when its disk runs */
+[data-os] { display: none; }
+html[data-sys="fuzix"] [data-os="fuzix"], html[data-sys="lsdos"] [data-os="lsdos"] { display: revert; }
+.try button { font-family: var(--font-mono); font-size: 0.85rem; }
+.typein { display: flex; gap: 8px; }
+.typein input {
+  flex: 1;
+  min-width: 0;
+  font-family: var(--font-mono);
+  font-size: 1rem;
+  padding: 6px 10px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--panel);
+  color: var(--fg);
+}
+.about { display: grid; gap: 8px; max-width: 68ch; color: var(--fg); }
+.about p { margin: 0; }
+.about code { font-family: var(--font-mono); font-size: 0.9em; }
+.about .small { color: var(--muted); font-size: 0.9rem; }
+@media (prefers-reduced-motion: reduce) { canvas { filter: none; } }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header>
+    <h1>De TRS-80 Model II in je browser</h1>
+    <span class="badge">Z80 &middot; 4 MHz &middot; 512K &middot; harde schijf &middot; 2 &times; 8&quot; floppy</span>
+  </header>
+
+  <div class="bezel">
+    <div class="tube">
+      <canvas id="screen" width="960" height="576" tabindex="0" aria-label="Scherm van de Model II. Klik om te typen."></canvas>
+      <div class="hint" id="hint">De schijf wordt geladen…</div>
+    </div>
+  </div>
+
+  <div class="controls">
+    <button id="reset" type="button">Opnieuw opstarten</button>
+    <label for="speed">Snelheid
+      <select id="speed">
+        <option value="1">4 MHz, zoals de echte</option>
+        <option value="4">4× zo snel</option>
+        <option value="0">Zo snel als kan</option>
+      </select>
+    </label>
+    <label for="turbo"><input id="turbo" type="checkbox" checked> Snel opstarten</label>
+    <label for="disk">Harde schijf
+      <select id="disk"></select>
+    </label>
+    <label class="file" for="diskfile">Eigen image
+      <input id="diskfile" type="file" accept=".hdv,.gz,.txt">
+    </label>
+    <label for="bootfrom">Opstarten van
+      <select id="bootfrom">
+        <option value="hd">harde schijf</option>
+        <option value="fd">floppy 1</option>
+      </select>
+    </label>
+    <span class="status"><span class="dot load" id="dot"></span><span id="state">Laden</span><span id="mhz"></span></span>
+  </div>
+
+  <div class="drives">
+    <div class="drive" data-drive="0">
+      <span class="dname">Floppy 1</span>
+      <select class="fsel" aria-label="Floppy in station 1"></select>
+      <label class="file">Eigen <input class="ffile" type="file" accept=".imd,.dmk,.dsk,.raw,.gz"></label>
+      <label class="wp"><input class="fwp" type="checkbox"> schrijfbeveiligd</label>
+      <span class="save">Bewaar als <button class="fsave" type="button" data-fmt="imd">.imd</button> <button class="fsave" type="button" data-fmt="dmk">.dmk</button></span>
+    </div>
+    <div class="drive" data-drive="1">
+      <span class="dname">Floppy 2</span>
+      <select class="fsel" aria-label="Floppy in station 2"></select>
+      <label class="file">Eigen <input class="ffile" type="file" accept=".imd,.dmk,.dsk,.raw,.gz"></label>
+      <label class="wp"><input class="fwp" type="checkbox"> schrijfbeveiligd</label>
+      <span class="save">Bewaar als <button class="fsave" type="button" data-fmt="imd">.imd</button> <button class="fsave" type="button" data-fmt="dmk">.dmk</button></span>
+    </div>
+  </div>
+
+  <div class="try">
+    <h2>Probeer</h2>
+    <div class="row" id="macros">
+      <button type="button" data-keys="\r">Enter</button>
+      <button type="button" data-os="fuzix" data-keys="root\r">root</button>
+      <button type="button" data-os="fuzix" data-keys="ls /bin\r">ls /bin</button>
+      <button type="button" data-os="fuzix" data-keys="tbasic\r">tbasic</button>
+      <button type="button" data-os="fuzix" data-keys="10 FOR I=1 TO 10; PRINT I, I*I; NEXT I\rRUN\r">Tiny BASIC-programma</button>
+      <button type="button" data-os="fuzix" data-keys="BYE\r">BYE</button>
+      <button type="button" data-os="fuzix" data-fast="1" data-keys="echo 'main(){printf(&quot;Hallo van de Model II\n&quot;);}' &gt; t.c\rcc -o t t.c\r./t\r">C compileren</button>
+      <button type="button" data-os="fuzix" data-keys="basic\r">basic</button>
+      <button type="button" data-os="fuzix" data-keys="mount /dev/fd0 /mnt\r">mount floppy 1</button>
+      <button type="button" data-os="fuzix" data-keys="ls -l /mnt\r">ls -l /mnt</button>
+      <button type="button" data-os="fuzix" data-keys="umount /mnt\r">umount</button>
+      <button type="button" data-os="fuzix" data-keys="shutdown\r">shutdown</button>
+      <button type="button" data-os="lsdos" data-now="date">Datum van vandaag</button>
+      <button type="button" data-os="lsdos" data-now="time">Tijd van nu</button>
+      <button type="button" data-os="lsdos" data-keys="DIR\r">DIR</button>
+      <button type="button" data-os="lsdos" data-keys="DIR :0 (S,I)\r">DIR (S,I)</button>
+      <button type="button" data-os="lsdos" data-keys="FREE\r">FREE</button>
+      <button type="button" data-os="lsdos" data-keys="DEVICE\r">DEVICE</button>
+      <button type="button" data-os="lsdos" data-keys="DIR :1\r">DIR :1</button>
+      <button type="button" data-os="lsdos" data-keys="FORMAT :1 (N=&quot;DATA&quot;,M=&quot;PASSWORD&quot;,DDEN,SIDES=1,ABS)\r">FORMAT :1</button>
+      <button type="button" data-os="lsdos" data-keys="COPY NOTICE/TXT:0 :1\r">COPY naar :1</button>
+      <button type="button" data-os="lsdos" data-keys="LIB\r">LIB</button>
+      <button type="button" data-os="lsdos" data-keys="LIST NOTICE/TXT\r">LIST NOTICE/TXT</button>
+      <button type="button" data-os="lsdos" data-keys="MEMORY\r">MEMORY</button>
+    </div>
+    <div class="typein">
+      <input id="typein" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Of typ hier een regel en druk op Enter (handig op een telefoon)">
+      <button id="send" type="button">Stuur</button>
+    </div>
+  </div>
+
+  <div class="about">
+    <h2>Wat je ziet</h2>
+    <p>Een TRS-80 Model II wordt hier in je browser nagebootst: de Z80, het geheugen in banken van 32K, het scherm, het toetsenbord met zijn interrupt, de klokinterrupt van 30 keer per seconde en de WD1010-controller van de harde schijf. Hij start, net als de echte, met de opstart-ROM vanaf de harde schijf of vanaf floppy 1. Kies bij Harde schijf welk systeem; de images zijn <code>.hdv</code>-bestanden zoals trs80gp die gebruikt.</p>
+    <p>Er zijn twee 8"-floppystations aan een FD1791-controller met Z80-DMA. Kies per station een floppy, een lege (ongeformatteerde) floppy of een eigen image (<code>.imd</code>, <code>.dmk</code> of <code>.raw</code>); je kunt wisselen terwijl hij draait. Wat erop geschreven wordt, blijft in je browser; met Bewaar haal je de floppy binnen als <code>.imd</code> (ImageDisk) of <code>.dmk</code> (trs80gp).</p>
+    <p>Klik op het scherm om met je eigen toetsenbord te typen, of gebruik de knoppen en de regel hierboven (handig op een telefoon).</p>
+    <p data-os="fuzix"><strong>Fuzix</strong> is een klein Unix-achtig systeem. Druk bij de vragen om datum en tijd op Enter en log in als <code>root</code>; Ctrl-C onderbreekt een programma. Met <code>tbasic</code> (Tiny BASIC), <code>basic</code> en <code>cc</code> (een kleine C-compiler) kun je programmeren. Compileren duurt op de echte snelheid van 4 MHz ruim drie minuten; de knop C compileren zet de emulator daarom op zo snel als kan. Floppy 1 en 2 zijn <code>/dev/fd0</code> en <code>/dev/fd1</code>: <code>mount /dev/fd0 /mnt</code> zet een Fuzix-floppy onder <code>/mnt</code>. Van de Fuzix-opstartfloppy start je door bij Opstarten van floppy 1 te kiezen; geef bij <code>bootdev:</code> dan <code>hda2</code> (de harde schijf) of, met de dubbelzijdige floppy, <code>fda</code>. Stop met <code>shutdown</code>.</p>
+    <p data-os="lsdos"><strong>LS-DOS 6.3.1</strong> is het besturingssysteem van Logical Systems en MISOSYS, hier zo aangepast dat het van de harde schijf start (drive :0). Het vraagt bij elke start om datum en tijd (MM/DD/YY en HH:MM:SS); de knoppen vullen die van nu in. Daarna kun je commando's als <code>DIR</code>, <code>FREE</code>, <code>COPY</code>, <code>LIST</code> en <code>LIB</code> (alle ingebouwde commando's) geven. Ctrl-C is de BREAK-toets. Floppy 1 en 2 zijn drive <code>:1</code> en <code>:2</code>: <code>FORMAT :1</code> formatteert een lege floppy, daarna werken <code>COPY</code>, <code>DIR :1</code> en <code>BACKUP</code>.</p>
+    <p class="small">Wat je op de harde schijf verandert, blijft tot je de pagina herlaadt of opnieuw opstart; floppy's blijven bij opnieuw opstarten in het station. Z80-emulatie: z80-emulator van Lawrence Kesteloot (MIT). LS-DOS: &copy; MISOSYS, vrij te verspreiden met toestemming van Roy Soltoff (zie NOTICE/TXT op de schijf).</p>
+  </div>
+</div>
+
+<script type="module">
+/*
+ *	The disks to choose from come from disks.json next to this page:
+ *	[ { "name": "Fuzix", "file": "disks/hard2-0.hdv.gz", "os": "fuzix" },
+ *	  { "name": "Fuzix boot floppy", "file": "disks/boot.imd",
+ *	    "type": "floppy", "os": "fuzix" }, ... ]
+ *	Hard disks are .hdv, plain, gzip compressed (.gz) or gzip and base64
+ *	(.b64.txt). Floppies ("type": "floppy", or by the name) are .imd,
+ *	.dmk/.dsk or .raw, plain or .gz. "os": "fuzix" or "lsdos" picks the
+ *	buttons and text shown; without it the page guesses from the name.
+ *	Address options: ?disk=<file or name> the hard disk ("none" for none),
+ *	?fd1= and ?fd2= the floppies, ?boot=fd to start from floppy 1,
+ *	?embed=1 leaves out the title and the explanation (for an iframe).
+ */
+import { Z80 } from './z80.js';
+import { Model2, CPU_HZ } from './m2.js';
+import { Disk, loadDisk, toIMD, toDMK } from './floppy.js';
+
+const canvas = document.getElementById('screen');
+const ctx = canvas.getContext('2d');
+const hint = document.getElementById('hint');
+const dot = document.getElementById('dot');
+const stateEl = document.getElementById('state');
+const mhzEl = document.getElementById('mhz');
+const speedEl = document.getElementById('speed');
+const turboEl = document.getElementById('turbo');
+
+const COLS = 80, ROWS = 24, CW = 12, CH = 24;
+const PHOSPHOR = getComputedStyle(document.documentElement).getPropertyValue('--phosphor').trim() || '#e4efe6';
+const SCREEN = getComputedStyle(document.documentElement).getPropertyValue('--screen').trim() || '#070908';
+
+let pristine = null, m = null, pending = [], booting = true;
+
+function setState(text, kind) {
+  stateEl.textContent = text;
+  dot.className = 'dot ' + kind;
+}
+
+const DEFAULT_DISKS = [{ name: 'Fuzix', file: 'hard2-0.hdv.gz.b64.txt' }];
+const diskEl = document.getElementById('disk');
+const bootEl = document.getElementById('bootfrom');
+const params = new URLSearchParams(location.search);
+let disks = DEFAULT_DISKS, hds = [], fds = [];
+let hdEntry = null;				// the hard disk entry in use
+const floppies = [null, null];			// the disks in the drives
+const floppyEntry = [null, null];
+
+const isFloppy = d => d.type === 'floppy' || (d.type !== 'hd' && /\.(imd|dmk|dsk|raw)(\.gz)?$/i.test(d.file));
+
+// Turn the bytes of a disk file into the raw .hdv image
+async function decode(bytes, name) {
+  if (/\.b64\.txt$/i.test(name)) {
+    const bin = atob(new TextDecoder().decode(bytes).trim());
+    bytes = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  }
+  // gzip, unless the web server already unpacked it
+  if (bytes[0] === 0x1F && bytes[1] === 0x8B) {
+    const stream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'));
+    bytes = new Uint8Array(await new Response(stream).arrayBuffer());
+  }
+  if (bytes[0] !== 0x56 || bytes[1] !== 0xCB)
+    throw new Error(name + ' is geen harde-schijf-image (.hdv).');
+  if (!(bytes[8] & 0x02))
+    throw new Error(name + ' is geen Model II-schijf (byte 8 van de kop mist de Model II-vlag).');
+  return bytes;
+}
+
+async function fetchBytes(file) {
+  const res = await fetch(file);
+  if (!res.ok) throw new Error(file + ' kon niet worden geladen (' + res.status + ').');
+  return new Uint8Array(await res.arrayBuffer());
+}
+const fetchDisk = async d => decode(await fetchBytes(d.file), d.file);
+
+const findEntry = (list, want) => want ? list.findIndex(d => d.file === want || d.name === want ||
+  d.file.split('/').pop() === want) : -1;
+
+async function loadList() {
+  try {
+    const res = await fetch('disks.json');
+    if (res.ok) {
+      const list = await res.json();
+      if (Array.isArray(list) && list.length) disks = list;
+    }
+  } catch (e) { /* no list: the default disk */ }
+  hds = disks.filter(d => !isFloppy(d));
+  fds = disks.filter(isFloppy);
+  diskEl.innerHTML = '';
+  hds.forEach((d, i) => diskEl.add(new Option(d.name || d.file, i)));
+  diskEl.add(new Option('geen harde schijf', 'none'));
+  let saved = 0;
+  try { saved = localStorage.getItem('m2web-disk') || 0; } catch (e) { }
+  const want = params.get('disk');
+  if (want === 'none') saved = 'none';
+  else if (findEntry(hds, want) >= 0) saved = findEntry(hds, want);
+  diskEl.value = saved === 'none' || Number(saved) < hds.length ? saved : 0;
+  if (params.get('boot') === 'fd') bootEl.value = 'fd';
+  document.querySelectorAll('.drive').forEach(el => {
+    const i = Number(el.dataset.drive), sel = el.querySelector('.fsel');
+    sel.add(new Option('leeg station', 'none'));
+    sel.add(new Option('lege floppy (ongeformatteerd)', 'blank'));
+    fds.forEach((d, j) => sel.add(new Option(d.name || d.file, j)));
+    const w = findEntry(fds, params.get('fd' + (i + 1)));
+    sel.value = w >= 0 ? w : 'none';
+  });
+}
+
+// Which system runs: "os" in disks.json, else guessed from the name
+function setSystem(d) {
+  const t = d ? (d.os || ((d.file || '') + ' ' + (d.name || ''))) : '';
+  document.documentElement.dataset.sys =
+    /lsdos|ls-dos/i.test(t) ? 'lsdos' : /fuzix|hard2-0/i.test(t) ? 'fuzix' : '';
+}
+
+function fail(msg) {
+  m = null;
+  setState('Fout', 'err');
+  hint.hidden = false;
+  hint.textContent = msg;
+}
+
+async function boot(promise, label) {
+  setState('Schijf laden', 'load');
+  hint.hidden = false;
+  hint.textContent = label + ' wordt geladen…';
+  try {
+    pristine = await promise;
+    start();
+  } catch (e) {
+    fail(e.message);
+  }
+}
+
+function start() {
+  const fromFd = bootEl.value === 'fd';
+  m = new Model2(Z80, pristine ? pristine.slice() : null);
+  floppies.forEach((d, i) => { m.fdc.drives[i] = d; });
+  if (fromFd) {
+    if (!floppies[0]) return fail('Er zit geen floppy in station 1.');
+    if (!m.bootFloppy()) return fail('Floppy 1 is geen opstartfloppy voor de Model II (spoor 0 met "BOOT" en "DIAG").');
+    setSystem(floppyEntry[0]);
+  } else {
+    if (!pristine) return fail('Er is geen harde schijf gekozen: kies er een, of start van floppy 1.');
+    if (!m.bootHd()) return fail('Op deze schijf staat geen opstartcode (/* END BOOT */).');
+    setSystem(hdEntry);
+  }
+  pending = [];
+  booting = turboEl.checked;
+  setState(booting ? 'Opstarten' : 'Draait', 'run');
+  hint.hidden = true;
+}
+
+function loadHd() {
+  const v = diskEl.value;
+  if (v === 'none') { hdEntry = null; boot(Promise.resolve(null), 'Geen schijf'); return; }
+  hdEntry = hds[Number(v)];
+  boot(fetchDisk(hdEntry), hdEntry.name || hdEntry.file);
+}
+
+diskEl.addEventListener('change', () => {
+  try { localStorage.setItem('m2web-disk', diskEl.value); } catch (e) { }
+  loadHd();
+});
+bootEl.addEventListener('change', () => { start(); canvas.focus(); });
+
+document.getElementById('diskfile').addEventListener('change', e => {
+  const f = e.target.files[0];
+  if (!f) return;
+  hdEntry = { file: f.name };
+  boot(f.arrayBuffer().then(b => decode(new Uint8Array(b), f.name)), f.name);
+});
+
+// ---- Floppy drives
+function insert(i, disk, entry) {
+  floppies[i] = disk;
+  floppyEntry[i] = entry;
+  if (m) m.fdc.drives[i] = disk;
+  const el = document.querySelector('.drive[data-drive="' + i + '"]');
+  el.querySelector('.fwp').checked = !!(disk && disk.wp);
+}
+
+async function chooseFloppy(i) {
+  const el = document.querySelector('.drive[data-drive="' + i + '"]');
+  const v = el.querySelector('.fsel').value;
+  if (v === 'own') return;
+  if (v === 'none') return insert(i, null, null);
+  if (v === 'blank') return insert(i, new Disk('leeg'), null);
+  const d = fds[Number(v)];
+  try {
+    insert(i, await loadDisk(await fetchBytes(d.file), d.file.split('/').pop()), d);
+  } catch (e) {
+    insert(i, null, null);
+    el.querySelector('.fsel').value = 'none';
+    alert(e.message);
+  }
+}
+
+document.querySelectorAll('.drive').forEach(el => {
+  const i = Number(el.dataset.drive), sel = el.querySelector('.fsel');
+  sel.addEventListener('change', () => chooseFloppy(i));
+  el.querySelector('.ffile').addEventListener('change', async e => {
+    const f = e.target.files[0];
+    if (!f) return;
+    try {
+      const disk = await loadDisk(new Uint8Array(await f.arrayBuffer()), f.name);
+      let o = sel.querySelector('option[value="own"]');
+      if (!o) { o = new Option('', 'own'); sel.add(o); }
+      o.textContent = f.name;
+      sel.value = 'own';
+      insert(i, disk, { file: f.name });
+    } catch (err) { alert(err.message); }
+    e.target.value = '';
+  });
+  el.querySelector('.fwp').addEventListener('change', e => {
+    if (floppies[i]) floppies[i].wp = e.target.checked;
+  });
+  el.querySelectorAll('.fsave').forEach(b => b.addEventListener('click', () => {
+    const d = floppies[i];
+    if (!d || !d.tracks.size) { alert('Er zit geen (geformatteerde) floppy in station ' + (i + 1) + '.'); return; }
+    const data = b.dataset.fmt === 'dmk' ? toDMK(d) : toIMD(d);
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([data], { type: 'application/octet-stream' }));
+    a.download = (d.name || 'floppy').replace(/\.(imd|dmk|dsk|raw)$/i, '') + '.' + b.dataset.fmt;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  }));
+});
+
+function draw() {
+  ctx.fillStyle = SCREEN;
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.font = (CH) + 'px VT323, "IBM Plex Mono", monospace';
+  ctx.textBaseline = 'top';
+  const v = m.video;
+  const cur = m.cursor();
+  const blink = (performance.now() % 1000) < 600;
+  for (let y = 0; y < ROWS; y++) {
+    for (let x = 0; x < COLS; x++) {
+      const i = y * COLS + x;
+      const b = v[i];
+      let rev = (b & 0x80) !== 0;
+      if (i === cur && blink) rev = !rev;
+      const c = b & 0x7F;
+      if (rev) {
+        ctx.fillStyle = PHOSPHOR;
+        ctx.fillRect(x * CW, y * CH, CW, CH);
+      }
+      if (c > 32 && c < 127) {
+        ctx.fillStyle = rev ? SCREEN : PHOSPHOR;
+        ctx.fillText(String.fromCharCode(c), x * CW, y * CH + 1);
+      }
+    }
+  }
+}
+
+let last = performance.now(), cycAcc = 0, cycT = last;
+function frame(now) {
+  if (m) {
+    // keys from paste and the buttons go in a few at a time
+    while (pending.length && m.keyq.length < 2) m.key(pending.shift());
+    let dt = Math.min(now - last, 50);
+    const speed = Number(speedEl.value);
+    const before = m.hal.tStateCount;
+    if (booting || speed === 0) {
+      const tEnd = performance.now() + 14;
+      while (performance.now() < tEnd) m.run(40000);
+    } else {
+      m.run(Math.round(dt / 1000 * CPU_HZ * speed));
+    }
+    cycAcc += m.hal.tStateCount - before;
+    if (now - cycT > 1000) {
+      mhzEl.textContent = (cycAcc / (now - cycT) / 1000).toFixed(1) + ' MHz';
+      cycAcc = 0; cycT = now;
+    }
+    if (booting) {
+      const t = m.text();
+      if (/login:|Enter new date|bootdev:|Date MM\/DD\/YY/.test(t)) {
+        booting = false;
+        setState('Draait', 'run');
+      }
+    }
+    draw();
+  }
+  last = now;
+  requestAnimationFrame(frame);
+}
+
+function typeText(s) {
+  for (const ch of s) pending.push(ch === '\n' ? 13 : ch.charCodeAt(0));
+}
+
+canvas.addEventListener('keydown', e => {
+  if (!m) return;
+  let c = -1;
+  const k = e.key;
+  if (k === 'Enter') c = 13;
+  else if (k === 'Backspace') c = 8;
+  else if (k === 'Tab') c = 9;
+  else if (k === 'Escape') c = 27;
+  else if (k === 'ArrowLeft') c = 0x1C;
+  else if (k === 'ArrowRight') c = 0x1D;
+  else if (k === 'ArrowUp') c = 0x1E;
+  else if (k === 'ArrowDown') c = 0x1F;
+  else if (e.ctrlKey && k.length === 1 && /[a-z@\[\\\]^_]/i.test(k)) c = k.toUpperCase().charCodeAt(0) & 0x1F;
+  else if (k.length === 1 && !e.metaKey && !e.altKey) c = k.charCodeAt(0);
+  if (c >= 0 && c < 128) {
+    pending.push(c);
+    e.preventDefault();
+  }
+});
+canvas.addEventListener('paste', e => {
+  const t = e.clipboardData && e.clipboardData.getData('text');
+  if (t) { typeText(t.replace(/\r\n/g, '\n')); e.preventDefault(); }
+});
+canvas.addEventListener('click', () => canvas.focus());
+
+document.getElementById('macros').addEventListener('click', e => {
+  const b = e.target.closest('button');
+  if (!b || !m) return;
+  if (b.dataset.now) {			// LS-DOS wants MM/DD/YY and HH:MM:SS
+    const n = new Date(), p = x => String(x).padStart(2, '0');
+    typeText((b.dataset.now === 'date'
+      ? p(n.getMonth() + 1) + '/' + p(n.getDate()) + '/' + p(n.getFullYear() % 100)
+      : p(n.getHours()) + ':' + p(n.getMinutes()) + ':' + p(n.getSeconds())) + '\r');
+  } else typeText(b.dataset.keys.replace(/\\r/g, '\r'));
+  if (b.dataset.fast) speedEl.value = '0';	/* compiling takes minutes at 4 MHz */
+  canvas.focus();
+});
+const typein = document.getElementById('typein');
+function sendLine() {
+  if (!m) return;
+  typeText(typein.value + '\r');
+  typein.value = '';
+}
+document.getElementById('send').addEventListener('click', sendLine);
+typein.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); sendLine(); } });
+document.getElementById('reset').addEventListener('click', () => { if (pristine) { start(); canvas.focus(); } });
+
+(async () => {
+  try {
+    await document.fonts.load(CH + 'px VT323');
+  } catch (e) { /* the fallback font is fine */ }
+  await loadList();
+  await Promise.all([0, 1].map(chooseFloppy));
+  requestAnimationFrame(frame);
+  loadHd();
+})();
+</script>
+</body>
+</html>

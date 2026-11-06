@@ -1,0 +1,7 @@
+[
+  { "name": "Fuzix (Model II)", "file": "disks/hard2-0.hdv.gz", "os": "fuzix" },
+  { "name": "LS-DOS 6.3.1", "file": "disks/lsdos631n-hd.hdv.gz", "os": "lsdos" },
+  { "name": "Fuzix-opstartfloppy", "file": "disks/boot.imd", "type": "floppy", "os": "fuzix" },
+  { "name": "Fuzix-opstartfloppy met bestandssysteem (2 zijden)", "file": "disks/bootds.imd", "type": "floppy", "os": "fuzix" },
+  { "name": "LS-DOS-datafloppy (leeg, geformatteerd)", "file": "disks/lsdos-data.imd.gz", "type": "floppy", "os": "lsdos" }
+]
